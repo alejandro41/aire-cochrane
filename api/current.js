@@ -40,33 +40,98 @@ function htmlToText(html) {
 }
 
 function parseSincaValues(html) {
-  const text = htmlToText(html);
-  const candidates = [];
+  const rows = [];
 
-  const pairRegex = /(\d{2}[-/]\d{2}[-/]\d{2,4}|\d{4}[-/]\d{2}[-/]\d{2})\s+(\d{1,2}:?\d{0,2})?\s+(-?\d+(?:[.,]\d+)?)/g;
-  let m;
+  // 1) Intenta leer filas de tablas HTML.
+  const tableRowRegex = /<tr[\s\S]*?<\/tr>/gi;
+  const cellRegex = /<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi;
 
-  while ((m = pairRegex.exec(text)) !== null) {
-    const value = cleanNumber(m[3]);
-    if (value !== null && value >= 0 && value < 1000) {
-      candidates.push({
-        hora: `${m[1]} ${m[2] || ""}`.trim(),
-        mp25: Math.round(value * 10) / 10
-      });
+  const trMatches = html.match(tableRowRegex) || [];
+
+  for (const rowHtml of trMatches) {
+    const cells = [];
+    let cellMatch;
+
+    while ((cellMatch = cellRegex.exec(rowHtml)) !== null) {
+      const cleanCell = cellMatch[1]
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      if (cleanCell) cells.push(cleanCell);
+    }
+
+    if (cells.length >= 2) {
+      const joined = cells.join(" ");
+      const nums = cells
+        .map(cleanNumber)
+        .filter((n) => n !== null && n >= 0 && n < 1000);
+
+      if (nums.length) {
+        const value = nums[nums.length - 1];
+        const dateText =
+          cells.find((c) => /\d{1,2}[-/]\d{1,2}[-/]\d{2,4}|\d{4}[-/]\d{1,2}[-/]\d{1,2}|\d{1,2}:\d{2}/.test(c)) ||
+          joined.slice(0, 40);
+
+        rows.push({
+          hora: dateText,
+          mp25: Math.round(value * 10) / 10
+        });
+      }
     }
   }
 
-  if (!candidates.length) {
-    const nums = [...text.matchAll(/(^|\s)(\d{1,3}(?:[.,]\d+)?)(\s|$)/g)]
-      .map(x => cleanNumber(x[2]))
-      .filter(x => x !== null && x >= 0 && x < 300);
+  // 2) Si la tabla no se pudo leer, intenta leer texto plano.
+  if (!rows.length) {
+    const text = htmlToText(html);
 
-    nums.slice(-24).forEach((value, index) => {
-      candidates.push({ hora: `Dato ${index + 1}`, mp25: Math.round(value * 10) / 10 });
-    });
+    const patterns = [
+      /(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})\s+(\d{1,2}:\d{2})\s+(-?\d+(?:[.,]\d+)?)/g,
+      /(\d{4}[-/]\d{1,2}[-/]\d{1,2})\s+(\d{1,2}:\d{2})\s+(-?\d+(?:[.,]\d+)?)/g,
+      /(\d{1,2}:\d{2})\s+(-?\d+(?:[.,]\d+)?)/g
+    ];
+
+    for (const pattern of patterns) {
+      let match;
+
+      while ((match = pattern.exec(text)) !== null) {
+        const maybeValue = match[3] || match[2];
+        const value = cleanNumber(maybeValue);
+
+        if (value !== null && value >= 0 && value < 1000) {
+          rows.push({
+            hora: match[1],
+            mp25: Math.round(value * 10) / 10
+          });
+        }
+      }
+
+      if (rows.length) break;
+    }
   }
 
-  return candidates;
+  // 3) Último respaldo: busca números cercanos a textos MP2,5 / PM25.
+  if (!rows.length) {
+    const text = htmlToText(html);
+    const nearPm25 = text.match(/(?:MP\s*2[,.]5|PM25|PM\s*2[,.]5)[\s\S]{0,120}?(-?\d+(?:[.,]\d+)?)/i);
+
+    if (nearPm25) {
+      const value = cleanNumber(nearPm25[1]);
+
+      if (value !== null && value >= 0 && value < 1000) {
+        rows.push({
+          hora: "Último dato SINCA",
+          mp25: Math.round(value * 10) / 10
+        });
+      }
+    }
+  }
+
+  // 4) Filtra valores poco probables.
+  return rows
+    .filter((item) => item.mp25 !== null && item.mp25 >= 0 && item.mp25 < 500)
+    .slice(-24);
 }
 
 async function getAirFromSinca() {
