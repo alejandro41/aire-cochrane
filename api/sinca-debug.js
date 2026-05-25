@@ -1,78 +1,69 @@
 const SINCA_BASE = "https://sinca.mma.gob.cl";
 
-const SINCA_URL =
-  "https://sinca.mma.gob.cl/cgi-bin/APUB-MMA/apub.htmlindico2.cgi?from=210310&header=Cochrane&macro=PM25.horario.horario&macropath=.%2FRXI%2FB06%2FCal%2FPM25&page=pageFrame&to=260413";
+const TEST_URLS = [
+  {
+    name: "pageFrame",
+    url: "https://sinca.mma.gob.cl/cgi-bin/APUB-MMA/apub.htmlindico2.cgi?from=210310&header=Cochrane&macro=PM25.horario.horario&macropath=.%2FRXI%2FB06%2FCal%2FPM25&page=pageFrame&to=260413"
+  },
+  {
+    name: "csv",
+    url: "https://sinca.mma.gob.cl/cgi-bin/APUB-MMA/apub.htmlindico2.cgi?from=210310&header=Cochrane&macro=PM25.horario.horario&macropath=.%2FRXI%2FB06%2FCal%2FPM25&page=csv&to=260413"
+  },
+  {
+    name: "xcl",
+    url: "https://sinca.mma.gob.cl/cgi-bin/APUB-MMA/apub.htmlindico2.cgi?from=210310&header=Cochrane&macro=PM25.horario.horario&macropath=.%2FRXI%2FB06%2FCal%2FPM25&page=xcl&to=260413"
+  },
+  {
+    name: "txt",
+    url: "https://sinca.mma.gob.cl/cgi-bin/APUB-MMA/apub.htmlindico2.cgi?from=210310&header=Cochrane&macro=PM25.horario.horario&macropath=.%2FRXI%2FB06%2FCal%2FPM25&page=txt&to=260413"
+  },
+  {
+    name: "pageText",
+    url: "https://sinca.mma.gob.cl/cgi-bin/APUB-MMA/apub.htmlindico2.cgi?from=210310&header=Cochrane&macro=PM25.horario.horario&macropath=.%2FRXI%2FB06%2FCal%2FPM25&page=pageText&to=260413"
+  }
+];
 
-async function fetchHtml(url) {
-  const response = await fetch(url, {
+async function fetchHtml(item) {
+  const response = await fetch(item.url, {
     headers: {
       "User-Agent": "Monitor Ambiental Cochrane/1.0",
-      "Accept": "text/html,application/xhtml+xml,text/plain"
+      "Accept": "text/html,text/plain,text/csv,application/vnd.ms-excel,*/*"
     }
   });
 
-  const html = await response.text();
+  const text = await response.text();
 
   return {
-    url,
+    name: item.name,
+    url: item.url,
     status: response.status,
     contentType: response.headers.get("content-type"),
-    length: html.length,
-    html
+    length: text.length,
+    preview: text.slice(0, 2500)
   };
-}
-
-function extractFrameUrls(html) {
-  const urls = [];
-  const regex = /<frame[^>]+src=["']([^"']+)["']/gi;
-  let match;
-
-  while ((match = regex.exec(html)) !== null) {
-    let src = match[1];
-
-    if (!src) continue;
-
-    if (src.startsWith("/")) {
-      src = SINCA_BASE + src;
-    }
-
-    if (src.startsWith("http")) {
-      urls.push(src);
-    }
-  }
-
-  return urls;
 }
 
 export default async function handler(req, res) {
   try {
-    const first = await fetchHtml(SINCA_URL);
-    const frameUrls = extractFrameUrls(first.html);
+    const results = [];
 
-    const frames = [];
-
-    for (const frameUrl of frameUrls) {
-      const frame = await fetchHtml(frameUrl);
-      frames.push({
-        url: frame.url,
-        status: frame.status,
-        contentType: frame.contentType,
-        length: frame.length,
-        preview: frame.html.slice(0, 4000)
-      });
+    for (const item of TEST_URLS) {
+      try {
+        const result = await fetchHtml(item);
+        results.push(result);
+      } catch (error) {
+        results.push({
+          name: item.name,
+          url: item.url,
+          ok: false,
+          error: error.message
+        });
+      }
     }
 
     res.status(200).json({
       ok: true,
-      first: {
-        url: first.url,
-        status: first.status,
-        contentType: first.contentType,
-        length: first.length,
-        preview: first.html.slice(0, 1200)
-      },
-      frameUrls,
-      frames
+      results
     });
   } catch (error) {
     res.status(500).json({
