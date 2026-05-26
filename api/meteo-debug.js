@@ -1,6 +1,6 @@
 const METEOCHILE_USER = process.env.METEOCHILE_USER;
 const METEOCHILE_TOKEN = process.env.METEOCHILE_TOKEN;
-const METEOCHILE_EMA_CODE = "480002";
+const METEOCHILE_EMA_CODE = "470001";
 
 export default async function handler(req, res) {
   try {

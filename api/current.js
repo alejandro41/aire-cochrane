@@ -5,7 +5,7 @@ const METEOCHILE_EMA_PAGE = "https://climatologia.meteochile.gob.cl/application/
 const OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast?latitude=-47.2531&longitude=-72.5734&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,wind_direction_10m&timezone=America%2FSantiago";
 const METEOCHILE_USER = process.env.METEOCHILE_USER;
 const METEOCHILE_TOKEN = process.env.METEOCHILE_TOKEN;
-const METEOCHILE_EMA_CODE = "480002";
+const METEOCHILE_EMA_CODE = "470001";
 
 function todayChile() {
   return new Date(new Date().toLocaleString("en-US", { timeZone: "America/Santiago" }));
