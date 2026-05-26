@@ -402,7 +402,39 @@ function demoWeather(reason) {
     updatedAt: "Dato demo"
   };
 }
+async function getWeatherFromOpenMeteo() {
+  const LAT = -47.2536;
+  const LON = -72.5734;
 
+  const url =
+    `https://api.open-meteo.com/v1/forecast` +
+    `?latitude=${LAT}` +
+    `&longitude=${LON}` +
+    `&current=temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation` +
+    `&timezone=America%2FPunta_Arenas`;
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error("No se pudo obtener clima desde Open-Meteo");
+  }
+
+  const data = await response.json();
+
+  if (!data.current) {
+    throw new Error("Open-Meteo no entregó datos actuales");
+  }
+
+  return {
+  source: "Open-Meteo",
+  station: "Cochrane - referencia",
+  temperature: data.current.temperature_2m ?? 0,
+  humidity: data.current.relative_humidity_2m ?? 0,
+  wind: data.current.wind_speed_10m ?? 0,
+  rain: data.current.precipitation ?? 0,
+  updatedAt: data.current.time ?? new Date().toISOString()
+};
+}
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cache-Control", "s-maxage=600, stale-while-revalidate=1800");
