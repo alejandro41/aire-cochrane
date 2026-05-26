@@ -169,3 +169,20 @@ html {
   background: linear-gradient(135deg, #06b6d4, #34d399);
   color: white;
 }
+.footer {
+  margin-top: 28px;
+  margin-bottom: 28px;
+  padding: 16px 20px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
+}
+.content {
+  padding-bottom: 40px;
+}
