@@ -339,9 +339,9 @@ function App() {
           </section>
         </section>
 
-        <footer id="acerca" className="appFooter">
-          <span>Copyright © 2026 Alejandro Gatica. Todos los derechos reservados.</span>
-        </footer>
+        <footer className="footer">
+  Monitor Ambiental Cochrane · Copyright © 2026 Alejandro Gatica
+</footer>
       </main>
     </div>
   );
