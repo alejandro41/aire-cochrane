@@ -1,5 +1,6 @@
 const SINCA_STATION_PAGE = "https://sinca.mma.gob.cl/index.php/estacion/index/id/296";
 const SINCA_HISTORY_BASE = "https://sinca.mma.gob.cl/cgi-bin/APUB-MMA/apub.htmlindico2.cgi";
+const SINCA_CSV_URL = "https://sinca.mma.gob.cl/cgi-bin/registros2k19.cgi?domain=CONAMA&stn=B06&output=Cochrane";
 const METEOCHILE_EMA_PAGE = "https://climatologia.meteochile.gob.cl/application/diariob/visorDeDatosEma/480002";
 const OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast?latitude=-47.2531&longitude=-72.5734&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,wind_direction_10m&timezone=America%2FSantiago";
 
@@ -134,35 +135,101 @@ function parseSincaValues(html) {
     .slice(-24);
 }
 
+function parseSincaCsv(csvText) {
+  const lines = csvText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  let headerIndex = -1;
+
+  for (let i = 0; i < lines.length; i++) {
+    const normalized = lines[i]
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+    if (
+      normalized.includes("fecha") &&
+      (normalized.includes("mp 2,5") ||
+        normalized.includes("mp2,5") ||
+        normalized.includes("mp 2.5") ||
+        normalized.includes("mp2.5"))
+    ) {
+      headerIndex = i;
+      break;
+    }
+  }
+
+  if (headerIndex === -1) {
+    throw new Error("No se encontró encabezado MP2,5 en CSV SINCA");
+  }
+
+  const delimiter = lines[headerIndex].includes(";") ? ";" : ",";
+  const headers = lines[headerIndex]
+    .split(delimiter)
+    .map((h) =>
+      h
+        .trim()
+        .replace(/^"|"$/g, "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+    );
+
+  const dateIndex = headers.findIndex((h) => h.includes("fecha"));
+  const mp25Index = headers.findIndex(
+    (h) =>
+      h.includes("mp 2,5") ||
+      h.includes("mp2,5") ||
+      h.includes("mp 2.5") ||
+      h.includes("mp2.5")
+  );
+
+  if (dateIndex === -1 || mp25Index === -1) {
+    throw new Error("No se encontraron columnas Fecha y MP2,5 en CSV SINCA");
+  }
+
+  const rows = [];
+
+  for (let i = headerIndex + 1; i < lines.length; i++) {
+    const parts = lines[i]
+      .split(delimiter)
+      .map((p) => p.trim().replace(/^"|"$/g, ""));
+
+    const dateText = parts[dateIndex];
+    const value = cleanNumber(parts[mp25Index]);
+
+    if (dateText && value !== null && value >= 0 && value < 1000) {
+      rows.push({
+        hora: dateText,
+        mp25: Math.round(value * 10) / 10
+      });
+    }
+  }
+
+  return rows.slice(-24);
+}
+
 async function getAirFromSinca() {
-  const to = todayChile();
-  const from = new Date(to);
-  from.setDate(from.getDate() - 2);
-
-  const params = new URLSearchParams({
-    from: yymmdd(from),
-    header: "Cochrane",
-    macro: "PM25.horario.horario",
-    macropath: "./RXI/B06/Cal/PM25",
-    page: "pageFrame",
-    to: yymmdd(to)
-  });
-
-  const url = `${SINCA_HISTORY_BASE}?${params.toString()}`;
-  const response = await fetch(url, {
+  const response = await fetch(SINCA_CSV_URL, {
     headers: {
       "User-Agent": "Monitor Ambiental Cochrane/1.0",
-      "Accept": "text/html,application/xhtml+xml"
+      "Accept": "text/csv,text/plain,*/*"
     }
   });
 
-  if (!response.ok) throw new Error(`SINCA respondió ${response.status}`);
+  if (!response.ok) {
+    throw new Error(`SINCA CSV respondió ${response.status}`);
+  }
 
-  const html = await response.text();
-  const hourly = parseSincaValues(html);
+  const csvText = await response.text();
+  const hourly = parseSincaCsv(csvText);
   const latest = hourly.length ? hourly[hourly.length - 1] : null;
 
-  if (!latest) throw new Error("No se pudo leer MP2,5 desde SINCA");
+  if (!latest) {
+    throw new Error("No se pudo leer último MP2,5 desde CSV SINCA");
+  }
 
   return {
     source: "SINCA MMA",
@@ -173,7 +240,7 @@ async function getAirFromSinca() {
     value: latest.mp25,
     status: classifyMp25(latest.mp25),
     updatedAt: latest.hora,
-    hourly: hourly.slice(-24)
+    hourly
   };
 }
 
