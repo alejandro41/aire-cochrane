@@ -3,6 +3,9 @@ const SINCA_HISTORY_BASE = "https://sinca.mma.gob.cl/cgi-bin/APUB-MMA/apub.htmli
 const SINCA_CSV_URL = "https://sinca.mma.gob.cl/cgi-bin/registros2k19.cgi?domain=CONAMA&stn=B06&output=Cochrane";
 const METEOCHILE_EMA_PAGE = "https://climatologia.meteochile.gob.cl/application/diariob/visorDeDatosEma/480002";
 const OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast?latitude=-47.2531&longitude=-72.5734&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m,wind_direction_10m&timezone=America%2FSantiago";
+const METEOCHILE_USER = process.env.METEOCHILE_USER;
+const METEOCHILE_TOKEN = process.env.METEOCHILE_TOKEN;
+const METEOCHILE_EMA_CODE = "480002";
 
 function todayChile() {
   return new Date(new Date().toLocaleString("en-US", { timeZone: "America/Santiago" }));
@@ -264,10 +267,19 @@ function parseMeteoChile(html) {
 }
 
 async function getWeatherFromMeteoChile() {
-  const response = await fetch(METEOCHILE_EMA_PAGE, {
+  if (!METEOCHILE_USER || !METEOCHILE_TOKEN) {
+    throw new Error("Faltan credenciales de MeteoChile");
+  }
+
+  const url =
+    `https://climatologia.meteochile.gob.cl/application/servicios/getDatosRecientesEma/${METEOCHILE_EMA_CODE}` +
+    `?usuario=${encodeURIComponent(METEOCHILE_USER)}` +
+    `&token=${encodeURIComponent(METEOCHILE_TOKEN)}`;
+
+  const response = await fetch(url, {
     headers: {
       "User-Agent": "Monitor Ambiental Cochrane/1.0",
-      "Accept": "text/html,application/xhtml+xml"
+      "Accept": "application/json,text/plain,*/*"
     }
   });
 
@@ -275,47 +287,86 @@ async function getWeatherFromMeteoChile() {
     throw new Error(`MeteoChile respondió ${response.status}`);
   }
 
-  const html = await response.text();
-  const parsed = parseMeteoChile(html);
+  const text = await response.text();
 
-  const validValues = [
-    parsed.temperature,
-    parsed.humidity,
-    parsed.wind,
-    parsed.rain
-  ].filter((value) => value !== null && value !== undefined && Number.isFinite(Number(value)));
+  let json;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new Error("MeteoChile no devolvió JSON válido");
+  }
+
+  const rows = Array.isArray(json) ? json : json.datos || json.data || json.resultado || [];
+
+  if (!Array.isArray(rows) || rows.length === 0) {
+    throw new Error("MeteoChile no entregó registros recientes");
+  }
+
+  const latest = rows[rows.length - 1];
+
+  const pickValue = (obj, possibleKeys) => {
+    for (const key of possibleKeys) {
+      if (obj[key] !== undefined && obj[key] !== null && obj[key] !== "") {
+        return cleanNumber(obj[key]);
+      }
+    }
+    return null;
+  };
+
+  const temperature = pickValue(latest, [
+    "temperatura",
+    "temp",
+    "ta",
+    "T",
+    "valorTemperatura"
+  ]);
+
+  const humidity = pickValue(latest, [
+    "humedad",
+    "hr",
+    "humedadRelativa",
+    "HR"
+  ]);
+
+  const wind = pickValue(latest, [
+    "viento",
+    "ff",
+    "velocidadViento",
+    "wind",
+    "VV"
+  ]);
+
+  const rain = pickValue(latest, [
+    "precipitacion",
+    "aguaCaida",
+    "lluvia",
+    "pp",
+    "RR"
+  ]);
+
+  const updatedAt =
+    latest.fechaHora ||
+    latest.fecha_hora ||
+    latest.fecha ||
+    latest.momento ||
+    new Date().toISOString();
+
+  const validValues = [temperature, humidity, wind, rain].filter(
+    (value) => value !== null && Number.isFinite(Number(value))
+  );
 
   if (validValues.length < 2) {
     throw new Error("MeteoChile no entregó suficientes datos meteorológicos legibles");
   }
 
   return {
-    source: "MeteoChile / DMC",
-    station: "EMA 480002, referencia regional",
-    temperature: parsed.temperature,
-    humidity: parsed.humidity,
-    wind: parsed.wind,
-    rain: parsed.rain,
-    updatedAt: new Date().toISOString()
-  };
-}
-
-async function getWeatherFromOpenMeteo() {
-  const response = await fetch(OPEN_METEO_URL);
-  if (!response.ok) throw new Error(`Open-Meteo respondió ${response.status}`);
-
-  const data = await response.json();
-  const current = data.current || {};
-
-  return {
-    source: "Open-Meteo, respaldo automático",
-    station: "Coordenadas Cochrane",
-    temperature: current.temperature_2m ?? null,
-    humidity: current.relative_humidity_2m ?? null,
-    wind: current.wind_speed_10m ?? null,
-    windDirection: current.wind_direction_10m ?? null,
-    rain: current.precipitation ?? null,
-    updatedAt: current.time || new Date().toISOString()
+    source: "MeteoChile / DMC oficial",
+    station: `EMA ${METEOCHILE_EMA_CODE}`,
+    temperature,
+    humidity,
+    wind,
+    rain,
+    updatedAt
   };
 }
 
