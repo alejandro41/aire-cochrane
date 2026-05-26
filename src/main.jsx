@@ -15,13 +15,13 @@ function formatChileTime(dateInput = new Date()) {
   const date = dateInput ? new Date(dateInput) : new Date();
 
   const time = new Intl.DateTimeFormat("es-CL", {
-    timeZone: "America/Santiago",
+    timeZone: "America/Punta_Arenas",
     hour: "2-digit",
     minute: "2-digit",
-    hour12: false
+    hourCycle: "h23"
   }).format(date);
 
-  return `${time.replace(":", ".")} horas`;
+  return `${time} horas`;
 }
 function scrollToSection(sectionId) {
   const section = document.getElementById(sectionId);
@@ -306,7 +306,7 @@ function App() {
             <div className="compareGrid">
               <div><strong>{air.source}</strong><b>{formatNumber(currentMp25, 0)}</b><span>{quality.label}</span></div>
               <div><strong>{weather.source}</strong><b>{formatNumber(weather.temperature, 1)}</b><span>°C</span></div>
-              <div><strong>Actualización</strong><b>{lastRefresh ? lastRefresh.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" }) : "--:--"}</b><span>hora local</span></div>
+              <div><strong>Actualización</strong><b>{lastRefresh ? formatChileTime(lastRefresh).replace(" horas", "") : "--:--"}</b><span>hora local</span></div>
             </div>
           </section>
 
