@@ -155,15 +155,15 @@ function App() {
         </div>
 
         <nav className="menu">
-  <button className="active" onClick={() => scrollToSection("resumen")}><Home size={20} /> Resumen</button>
-  <button onClick={() => scrollToSection("aire")}><Activity size={20} /> Aire en tiempo real</button>
-  <button onClick={() => scrollToSection("clima")}><CloudSun size={20} /> Clima</button>
-  <button onClick={() => scrollToSection("graficos")}><LineChartIcon size={20} /> Gráficos</button>
-  <button onClick={() => scrollToSection("historial")}><CalendarDays size={20} /> Historial</button>
-  <button onClick={() => scrollToSection("comparaciones")}><Scale size={20} /> Comparaciones</button>
-  <button onClick={() => scrollToSection("alertas")}><Bell size={20} /> Alertas</button>
-  <button onClick={() => scrollToSection("recomendaciones")}><ShieldAlert size={20} /> Recomendaciones</button>
-  <button onClick={() => scrollToSection("acerca")}><Info size={20} /> Acerca del proyecto</button>
+  <a className="active" href="#resumen"><Home size={20} /> Resumen</a>
+  <a href="#aire"><Activity size={20} /> Aire en tiempo real</a>
+  <a href="#clima"><CloudSun size={20} /> Clima</a>
+  <a href="#graficos"><LineChartIcon size={20} /> Gráficos</a>
+  <a href="#historial"><CalendarDays size={20} /> Historial</a>
+  <a href="#comparaciones"><Scale size={20} /> Comparaciones</a>
+  <a href="#alertas"><Bell size={20} /> Alertas</a>
+  <a href="#recomendaciones"><ShieldAlert size={20} /> Recomendaciones</a>
+  <a href="#acerca"><Info size={20} /> Acerca del proyecto</a>
 </nav>
 
         <div className="sideBox">

@@ -133,3 +133,39 @@ body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#10243f}
   backdrop-filter: blur(12px);
   box-shadow: 0 18px 38px rgba(2, 6, 23, 0.18);
 }
+html {
+  scroll-behavior: smooth;
+}
+
+#resumen,
+#aire,
+#clima,
+#graficos,
+#historial,
+#comparaciones,
+#alertas,
+#recomendaciones,
+#acerca {
+  scroll-margin-top: 24px;
+}
+
+.menu a {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  text-decoration: none;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.menu a:hover,
+.menu a.active {
+  background: linear-gradient(135deg, #06b6d4, #34d399);
+  color: white;
+}
