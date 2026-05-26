@@ -273,11 +273,16 @@ async function getWeatherFromMeteoChile() {
 
   if (!response.ok) throw new Error(`MeteoChile respondió ${response.status}`);
 
-  const parsed = parseMeteoChile(await response.text());
+  const validValues = [
+  parsed.temperature,
+  parsed.humidity,
+  parsed.wind,
+  parsed.rain
+].filter((value) => value !== null && value !== undefined && Number.isFinite(Number(value)));
 
-  if (parsed.temperature === null && parsed.humidity === null && parsed.wind === null && parsed.rain === null) {
-    throw new Error("No se pudieron leer datos desde MeteoChile");
-  }
+if (validValues.length < 2) {
+  throw new Error("MeteoChile no entregó suficientes datos meteorológicos legibles");
+}
 
   return {
     source: "MeteoChile / DMC",
