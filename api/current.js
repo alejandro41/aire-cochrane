@@ -200,7 +200,7 @@ function parseSincaCsv(csvText) {
     const dateText = parts[dateIndex];
     const value = cleanNumber(parts[mp25Index]);
 
-    if (dateText && value !== null && value >= 0 && value < 1000) {
+    if (dateText && value !== null && value > 0 && value < 1000) {
       rows.push({
         hora: dateText,
         mp25: Math.round(value * 10) / 10
@@ -271,18 +271,23 @@ async function getWeatherFromMeteoChile() {
     }
   });
 
-  if (!response.ok) throw new Error(`MeteoChile respondió ${response.status}`);
+  if (!response.ok) {
+    throw new Error(`MeteoChile respondió ${response.status}`);
+  }
+
+  const html = await response.text();
+  const parsed = parseMeteoChile(html);
 
   const validValues = [
-  parsed.temperature,
-  parsed.humidity,
-  parsed.wind,
-  parsed.rain
-].filter((value) => value !== null && value !== undefined && Number.isFinite(Number(value)));
+    parsed.temperature,
+    parsed.humidity,
+    parsed.wind,
+    parsed.rain
+  ].filter((value) => value !== null && value !== undefined && Number.isFinite(Number(value)));
 
-if (validValues.length < 2) {
-  throw new Error("MeteoChile no entregó suficientes datos meteorológicos legibles");
-}
+  if (validValues.length < 2) {
+    throw new Error("MeteoChile no entregó suficientes datos meteorológicos legibles");
+  }
 
   return {
     source: "MeteoChile / DMC",
