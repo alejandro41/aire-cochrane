@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
-  Bell, CloudRain, HeartPulse, Home, Info, LineChart as LineChartIcon,
+    Bell, CloudRain, HeartPulse, Home, Info, LineChart as LineChartIcon,
   MapPin, RefreshCcw, ShieldAlert, Thermometer, Trees, Wind, Baby,
   UserRound, Activity, CalendarDays, Scale, CheckCircle2, CloudSun,
   Sunrise, Sunset, HousePlus, Dumbbell, Flame, AlertTriangle
@@ -11,6 +11,28 @@ import {
 } from "recharts";
 import "./styles.css";
 import heroImage from "./assets/cochrane-fondo.png";
+function formatChileTime(dateInput = new Date()) {
+  const date = dateInput ? new Date(dateInput) : new Date();
+
+  const time = new Intl.DateTimeFormat("es-CL", {
+    timeZone: "America/Santiago",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(date);
+
+  return `${time.replace(":", ".")} horas`;
+}
+function scrollToSection(sectionId) {
+  const section = document.getElementById(sectionId);
+
+  if (section) {
+    section.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+  }
+}
 
 const demoData = {
   ok: true,
@@ -133,16 +155,16 @@ function App() {
         </div>
 
         <nav className="menu">
-          <button className="active"><Home size={20} /> Resumen</button>
-          <button><Activity size={20} /> Aire en tiempo real</button>
-          <button><CloudSun size={20} /> Clima</button>
-          <button><LineChartIcon size={20} /> Gráficos</button>
-          <button><CalendarDays size={20} /> Historial</button>
-          <button><Scale size={20} /> Comparaciones</button>
-          <button><Bell size={20} /> Alertas</button>
-          <button><ShieldAlert size={20} /> Recomendaciones</button>
-          <button><Info size={20} /> Acerca del proyecto</button>
-        </nav>
+  <button className="active" onClick={() => scrollToSection("resumen")}><Home size={20} /> Resumen</button>
+  <button onClick={() => scrollToSection("aire")}><Activity size={20} /> Aire en tiempo real</button>
+  <button onClick={() => scrollToSection("clima")}><CloudSun size={20} /> Clima</button>
+  <button onClick={() => scrollToSection("graficos")}><LineChartIcon size={20} /> Gráficos</button>
+  <button onClick={() => scrollToSection("historial")}><CalendarDays size={20} /> Historial</button>
+  <button onClick={() => scrollToSection("comparaciones")}><Scale size={20} /> Comparaciones</button>
+  <button onClick={() => scrollToSection("alertas")}><Bell size={20} /> Alertas</button>
+  <button onClick={() => scrollToSection("recomendaciones")}><ShieldAlert size={20} /> Recomendaciones</button>
+  <button onClick={() => scrollToSection("acerca")}><Info size={20} /> Acerca del proyecto</button>
+</nav>
 
         <div className="sideBox">
           <h3>¿Quieres recibir alertas?</h3>
@@ -154,13 +176,13 @@ function App() {
       </aside>
 
       <main className="content">
-        <header className="hero">
+        <header id="resumen" className="hero">
           <div>
             <h1>Hola, Cochrane 🌿</h1>
             <p className="heroSub">Monitoreo ambiental en tiempo real para nuestra comuna</p>
             <div className="heroTags">
               <span><MapPin size={16} /> Cochrane, Región de Aysén</span>
-              <span><CalendarDays size={16} /> {lastRefresh ? `Actualizado ${lastRefresh.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}` : "Cargando datos..."}</span>
+              <span><CalendarDays size={16} /> {lastRefresh ? `Actualizado ${formatChileTime(lastRefresh)}` : "Cargando datos..."}</span>
             </div>
           </div>
 
@@ -188,7 +210,7 @@ function App() {
         )}
 
         <section className="topGrid">
-          <section className="card">
+          <section id="aire" className="card">
             <div className="cardTitle">Calidad del aire actual</div>
             <div className="cardSub">Fuente: {air.source} · Estación {air.station}</div>
 
@@ -208,7 +230,7 @@ function App() {
             </div>
           </section>
 
-          <section className="card">
+          <section id="clima" className="card">
             <div className="cardTitle">Condiciones meteorológicas</div>
             <div className="cardSub">Fuente: {weather.source} · {weather.station}</div>
 
@@ -234,7 +256,7 @@ function App() {
         </section>
 
         <section className="middleGrid">
-          <section className="card chartCard">
+          <section id="graficos" className="card chartCard">
             <div className="cardTitle">¿Cómo estuvo el aire hoy?</div>
             <div className="cardSub">Este gráfico muestra en qué horas el aire estuvo mejor o peor durante las últimas 24 horas.</div>
 
@@ -264,7 +286,7 @@ function App() {
             </div>
           </section>
 
-          <section className="card">
+          <section id="historial" className="card">
             <div className="cardTitle">Resumen semanal</div>
             <div className="cardSub">Etapa siguiente: historial automático guardado cada 15 minutos.</div>
 
@@ -277,7 +299,7 @@ function App() {
         </section>
 
         <section className="bottomGrid">
-          <section className="card compareCard">
+          <section id="comparaciones" className="card compareCard">
             <div className="cardTitle">Comparación de fuentes</div>
             <div className="cardSub">Primera versión conectada a fuentes externas.</div>
 
@@ -288,7 +310,7 @@ function App() {
             </div>
           </section>
 
-          <section className="card recommendationsCard">
+          <section id="recomendaciones" className="card recommendationsCard">
             <div className="recommendHeader">
               <ShieldAlert size={26} />
               <div>
@@ -307,7 +329,7 @@ function App() {
             </div>
           </section>
 
-          <section className="card alertCard">
+          <section id="alertas" className="card alertCard">
             <div className="cardTitle alertTitle">Alertas activas</div>
             <div className="alertCenter">
               <CheckCircle2 size={38} />
@@ -317,7 +339,7 @@ function App() {
           </section>
         </section>
 
-        <footer className="appFooter">
+        <footer id="acerca" className="appFooter">
           <span>Copyright © 2026 Alejandro Gatica. Todos los derechos reservados.</span>
         </footer>
       </main>
